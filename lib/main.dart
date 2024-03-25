@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:logger/logger.dart';
+
+import 'config.dart';
+
+import 'loginCodePage.dart';
+import 'loginPage.dart';
 
 
 void main() {
   runApp(const MyApp());
 }
 final logger = Logger();
+const storage = FlutterSecureStorage();
 
-const host = 'http://localhost:5000';
+String email = '';
+String authToken = '';
+
 const requestTimeout = Duration(seconds: 5);
 
 class MyApp extends StatelessWidget {
@@ -26,6 +35,8 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const MyHomePage(title: 'Baťovka'),
+        '/login': (context) => const LoginPage(),
+        '/loginCode': (context) => const LoginCodePage(),
         '/questions': (context) => const QuestionsPage(),
       },
     );
@@ -41,6 +52,25 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+
+  @override
+  void initState() {
+    super.initState();
+    checkAccount();
+  }
+
+  Future<void> checkAccount() async {
+    logger.d('Checking account');
+    authToken = await storage.read(key: authTokenKey) ?? '';
+    email = await storage.read(key: authEmailKey) ?? '';
+    if (authToken.isEmpty) {
+      Navigator.pushNamed(context, '/login');
+    }
+    if (email.isEmpty) {
+      Navigator.pushNamed(context, '/loginCode');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,7 +117,7 @@ class _QuestionsPageState extends State<QuestionsPage> {
 
   Future<void> fetchQuestions() async {
     try {
-      final response = await http.get(Uri.parse('$host/question/1')).timeout(requestTimeout);
+      final response = await http.get(Uri.parse('$host/user/question/1')).timeout(requestTimeout);
       if (response.statusCode == 200) {
         setState(() {
           questions = jsonDecode(response.body);
